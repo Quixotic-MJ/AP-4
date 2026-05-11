@@ -1,15 +1,18 @@
 import "../global.css";
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, Modal, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Image, Modal, TextInput, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker'; // <-- 1. Import ImagePicker
+import * as ImagePicker from 'expo-image-picker';
+
+// Import Firebase functions from your service file
+import { addRecipe, getRecipes, updateRecipe, deleteRecipe } from '../services/db'; 
 
 // --- Sub-component for Simple Recipe Cards ---
 const RecipeCard = ({ item, openEditModal, handleArchive, getSodiumBadge }) => {
-    const badge = getSodiumBadge(item.Nutritional_Info.sodium_mg);
+    const badge = getSodiumBadge(item.Nutritional_Info?.sodium_mg || 0);
 
     return (
         <TouchableOpacity
@@ -43,12 +46,12 @@ const RecipeCard = ({ item, openEditModal, handleArchive, getSodiumBadge }) => {
                 </View>
 
                 <View className="flex-row items-center justify-between mt-3">
-                    <Text className="text-slate-400 font-bold text-[11px] uppercase tracking-wider">
-                        ID: {item.Recipe_ID}
+                    <Text className="text-slate-400 font-bold text-[11px] uppercase tracking-wider" numberOfLines={1} style={{maxWidth: 100}}>
+                        ID: {item.Recipe_ID ? item.Recipe_ID.substring(0,6) : 'N/A'}...
                     </Text>
                     <View className="flex-row items-center">
                         <View className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />
-                        <Text className="text-slate-500 text-[11px] font-bold">{item.Content_Status}</Text>
+                        <Text className="text-slate-500 text-[11px] font-bold">{item.Content_Status || 'Active'}</Text>
                     </View>
                 </View>
             </View>
@@ -62,45 +65,19 @@ export default function ContentManagementScreen() {
     const insets = useSafeAreaInsets();
     const [activeTab, setActiveTab] = useState('recipes');
 
-    // Initial data mapped from your table structure
-    const [recipes, setRecipes] = useState([
-        {
-            Recipe_ID: '1',
-            Recipe_Name: 'Steamed Bangus with Ginger',
-            Ingredients: ["1 piece Bangus (Milkfish)", "1 thumb Ginger, sliced", "2 cloves Garlic, minced", "1 tbsp Low-sodium soy sauce"],
-            Instructions: ["Step 1: Clean the fish.", "Step 2: Stuff with ginger and garlic.", "Step 3: Steam for 15-20 minutes.", "Step 4: Drizzle with low-sodium soy sauce."],
-            Nutritional_Info: { calories: 210, sodium_mg: 180, protein_g: 22 },
-            Content_Status: 'Active',
-            image: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=200&h=200&fit=crop' 
-        },
-        {
-            Recipe_ID: '2',
-            Recipe_Name: 'Low-Sodium Chicken Tinola',
-            Ingredients: ["200g Chicken breast", "1 cup Green papaya, sliced", "1 thumb Ginger, crushed", "1 cup Malunggay leaves"],
-            Instructions: ["Step 1: Boil 2 cups of water.", "Step 2: Add ginger and chicken breast.", "Step 3: Simmer for 20 minutes.", "Step 4: Add papaya and malunggay. Serve hot."],
-            Nutritional_Info: { calories: 250, sodium_mg: 200, protein_g: 25 },
-            Content_Status: 'Active',
-            image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=200&h=200&fit=crop'
-        },
-        {
-            Recipe_ID: '3',
-            Recipe_Name: 'Veggie Omelet',
-            Ingredients: ["2 Eggs", "1 Tomato, diced", "1 Onion, diced", "1 tsp Olive oil"],
-            Instructions: ["Step 1: Beat the eggs lightly.", "Step 2: Heat olive oil in a non-stick pan.", "Step 3: Sauté onions and tomatoes.", "Step 4: Pour eggs over the veggies and cook until set."],
-            Nutritional_Info: { calories: 180, sodium_mg: 150, protein_g: 14 },
-            Content_Status: 'Active',
-            image: 'https://images.unsplash.com/photo-1510693205033-0428eb1fc297?w=200&h=200&fit=crop'
-        }
-    ]);
+    // State for Firebase Data
+    const [recipes, setRecipes] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Modal & Form State
     const [modalVisible, setModalVisible] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     // Form Fields
     const [editingId, setEditingId] = useState(null);
     const [formName, setFormName] = useState('');
-    const [formImage, setFormImage] = useState(null); // <-- 2. Add form image state
+    const [formImage, setFormImage] = useState(null);
     const [formIngredients, setFormIngredients] = useState(''); 
     const [formInstructions, setFormInstructions] = useState(''); 
     const [formCalories, setFormCalories] = useState('');
@@ -111,14 +88,24 @@ export default function ContentManagementScreen() {
         { id: 'recipes', label: 'Recipes', icon: 'silverware-fork-knife' },
     ];
 
-    // --- Actions ---
+    // --- Firebase Initialization ---
+    useEffect(() => {
+        fetchData();
+    }, []);
 
-    // 3. Add Image Picker Logic
+    const fetchData = async () => {
+        setIsLoading(true);
+        const data = await getRecipes();
+        setRecipes(data);
+        setIsLoading(false);
+    };
+
+    // --- Actions ---
     const pickImage = async () => {
         let result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
-            aspect: [1, 1], // Square to match the UI nicely
+            aspect: [1, 1],
             quality: 0.7,
         });
 
@@ -131,7 +118,7 @@ export default function ContentManagementScreen() {
         setIsEditing(false);
         setEditingId(null);
         setFormName('');
-        setFormImage(null); // Reset image
+        setFormImage(null);
         setFormIngredients('');
         setFormInstructions('');
         setFormCalories('');
@@ -143,24 +130,25 @@ export default function ContentManagementScreen() {
     const openEditModal = (recipe) => {
         setIsEditing(true);
         setEditingId(recipe.Recipe_ID);
-        setFormName(recipe.Recipe_Name);
-        setFormImage(recipe.image); // Load existing image
-        setFormIngredients(recipe.Ingredients.join('\n'));
-        setFormInstructions(recipe.Instructions.join('\n'));
-        setFormCalories(String(recipe.Nutritional_Info.calories));
-        setFormSodium(String(recipe.Nutritional_Info.sodium_mg));
-        setFormProtein(String(recipe.Nutritional_Info.protein_g));
+        setFormName(recipe.Recipe_Name || '');
+        setFormImage(recipe.image || null);
+        setFormIngredients(recipe.Ingredients ? recipe.Ingredients.join('\n') : '');
+        setFormInstructions(recipe.Instructions ? recipe.Instructions.join('\n') : '');
+        setFormCalories(String(recipe.Nutritional_Info?.calories || ''));
+        setFormSodium(String(recipe.Nutritional_Info?.sodium_mg || ''));
+        setFormProtein(String(recipe.Nutritional_Info?.protein_g || ''));
         setModalVisible(true);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!formName.trim()) {
             Alert.alert("Validation Error", "Recipe Name is required.");
             return;
         }
 
-        const newRecipe = {
-            Recipe_ID: isEditing ? editingId : Math.random().toString(36).substr(2, 9),
+        setIsSaving(true);
+
+        const recipeData = {
             Recipe_Name: formName,
             Ingredients: formIngredients.split('\n').filter(line => line.trim() !== ''),
             Instructions: formInstructions.split('\n').filter(line => line.trim() !== ''),
@@ -170,17 +158,22 @@ export default function ContentManagementScreen() {
                 protein_g: parseInt(formProtein) || 0
             },
             Content_Status: 'Active',
-            // Use the uploaded image, or a fallback if none provided
             image: formImage || 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=200&h=200&fit=crop' 
         };
 
-        if (isEditing) {
-            setRecipes(recipes.map(r => r.Recipe_ID === editingId ? newRecipe : r));
-        } else {
-            setRecipes([newRecipe, ...recipes]);
+        try {
+            if (isEditing) {
+                await updateRecipe(editingId, recipeData);
+            } else {
+                await addRecipe(recipeData);
+            }
+            await fetchData(); // Refresh the list from Firebase
+            setModalVisible(false);
+        } catch (error) {
+            Alert.alert("Error", "Failed to save recipe to database.");
+        } finally {
+            setIsSaving(false);
         }
-
-        setModalVisible(false);
     };
 
     const handleArchive = (id) => {
@@ -192,8 +185,13 @@ export default function ContentManagementScreen() {
                 {
                     text: "Archive",
                     style: "destructive",
-                    onPress: () => {
-                        setRecipes(recipes.filter(r => r.Recipe_ID !== id));
+                    onPress: async () => {
+                        try {
+                            await deleteRecipe(id);
+                            await fetchData(); // Refresh list after deletion
+                        } catch (error) {
+                            Alert.alert("Error", "Failed to delete recipe.");
+                        }
                     }
                 }
             ]
@@ -269,19 +267,24 @@ export default function ContentManagementScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Standard Content List (No Swipes) */}
+                {/* Standard Content List */}
                 <View className="space-y-4">
-                    {recipes.map((item) => (
-                        <RecipeCard 
-                            key={item.Recipe_ID}
-                            item={item}
-                            openEditModal={openEditModal}
-                            handleArchive={handleArchive}
-                            getSodiumBadge={getSodiumBadge}
-                        />
-                    ))}
+                    {isLoading ? (
+                        <ActivityIndicator size="large" color="#1D4ED8" className="mt-10" />
+                    ) : recipes.length === 0 ? (
+                        <Text className="text-center text-slate-400 mt-10">No recipes found. Add one!</Text>
+                    ) : (
+                        recipes.map((item) => (
+                            <RecipeCard 
+                                key={item.Recipe_ID}
+                                item={item}
+                                openEditModal={openEditModal}
+                                handleArchive={handleArchive}
+                                getSodiumBadge={getSodiumBadge}
+                            />
+                        ))
+                    )}
                 </View>
-
             </ScrollView>
 
             {/* Floating Action Button */}
@@ -304,27 +307,31 @@ export default function ContentManagementScreen() {
                 visible={modalVisible}
                 animationType="slide"
                 presentationStyle="pageSheet"
-                onRequestClose={() => setModalVisible(false)}
+                onRequestClose={() => !isSaving && setModalVisible(false)}
             >
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     className="flex-1 bg-[#F8FAFC]"
                 >
                     <View className="flex-row items-center justify-between px-6 pt-6 pb-4 bg-white border-b border-slate-100">
-                        <TouchableOpacity onPress={() => setModalVisible(false)} className="p-2 -ml-2">
+                        <TouchableOpacity onPress={() => setModalVisible(false)} disabled={isSaving} className="p-2 -ml-2">
                             <Text className="text-[#1D4ED8] font-bold text-base">Cancel</Text>
                         </TouchableOpacity>
                         <Text className="font-black text-slate-900 text-lg">
                             {isEditing ? 'Edit Recipe' : 'New Recipe'}
                         </Text>
-                        <TouchableOpacity onPress={handleSave} className="p-2 -mr-2 bg-[#1D4ED8] px-4 rounded-full">
-                            <Text className="text-white font-bold text-sm">Save</Text>
+                        <TouchableOpacity onPress={handleSave} disabled={isSaving} className={`p-2 -mr-2 px-4 rounded-full ${isSaving ? 'bg-blue-300' : 'bg-[#1D4ED8]'}`}>
+                            {isSaving ? (
+                                <ActivityIndicator size="small" color="white" />
+                            ) : (
+                                <Text className="text-white font-bold text-sm">Save</Text>
+                            )}
                         </TouchableOpacity>
                     </View>
 
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="p-6 pb-24">
                         
-                        {/* 4. Image Upload Section */}
+                        {/* Image Upload Section */}
                         <Text className="text-slate-800 font-bold mb-2 ml-1 text-sm">Recipe Image</Text>
                         <View className="mb-6 flex-row items-center">
                             {formImage ? (
@@ -423,7 +430,6 @@ export default function ContentManagementScreen() {
                                 </View>
                             </View>
                         </View>
-
                     </ScrollView>
                 </KeyboardAvoidingView>
             </Modal>
