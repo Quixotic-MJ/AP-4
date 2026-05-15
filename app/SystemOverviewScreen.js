@@ -55,7 +55,7 @@ export default function SystemOverviewScreen() {
                             <MaterialCommunityIcons name="heart-pulse" size={16} color="white" />
                         </View>
                         <Text className="font-bold text-slate-900 text-[17px] tracking-tight">
-                            HealthAdmin CMS
+                            HeartLink
                         </Text>
                     </View>
                 </View>
@@ -83,7 +83,6 @@ export default function SystemOverviewScreen() {
                     </Text>
                 </View>
 
-                {/* --- CMS KPI CARDS GRID --- */}
                 <View className="flex-row flex-wrap justify-between mb-8">
                     <View className="bg-white rounded-[24px] p-5 shadow-sm shadow-slate-200/50 border border-slate-100 w-[48%] md:w-[31%] mb-4">
                         <View className="flex-row items-center mb-4">
@@ -160,7 +159,7 @@ export default function SystemOverviewScreen() {
                                 </View>
                                 <Text className="font-black text-white text-xl tracking-tight">HeartLink</Text>
                             </View>
-                            <Text className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">CMS Admin Portal</Text>
+                            <Text className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1">Admin Portal</Text>
                         </View>
 
                         <ScrollView className="flex-1 py-4">

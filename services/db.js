@@ -144,6 +144,25 @@ export const getAdmins = async () => {
     }
 };
 
+export const updateAdmin = async (id, updatedData) => {
+    try {
+        const adminRef = doc(db, ADMINS_COLLECTION, id);
+        await updateDoc(adminRef, updatedData);
+    } catch (e) {
+        console.error("Error updating admin: ", e);
+        throw e;
+    }
+};
+
+export const deleteAdmin = async (id) => {
+    try {
+        await deleteDoc(doc(db, ADMINS_COLLECTION, id));
+    } catch (e) {
+        console.error("Error deleting admin: ", e);
+        throw e;
+    }
+};
+
 export const getCounts = async () => {
     try {
         const recipesSnapshot = await getCountFromServer(collection(db, RECIPES_COLLECTION));

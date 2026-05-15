@@ -12,7 +12,7 @@ import { updatePassword, signOut, updateProfile } from 'firebase/auth';
 export default function SettingsScreen() {
     const router = useRouter();
     const user = auth.currentUser;
-    
+
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -63,8 +63,8 @@ export default function SettingsScreen() {
                     "For security reasons, please log out and log back in before changing your password.",
                     [
                         { text: "Cancel", style: "cancel" },
-                        { 
-                            text: "Log Out", 
+                        {
+                            text: "Log Out",
                             style: "destructive",
                             onPress: async () => {
                                 await signOut(auth);
@@ -104,7 +104,7 @@ export default function SettingsScreen() {
 
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
                 <ScrollView contentContainerClassName="p-6 pb-48" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                    
+
                     {/* --- PROFILE SECTION --- */}
                     <View className="mb-10 items-center mt-4">
                         <TouchableOpacity onPress={handlePickImage} activeOpacity={0.8} className="relative mb-4">
@@ -119,7 +119,7 @@ export default function SettingsScreen() {
                                 <Feather name="camera" size={14} color="white" />
                             </View>
                         </TouchableOpacity>
-                        
+
                         <Text className="text-xl font-black text-slate-900 tracking-tight">Administrator</Text>
                         <Text className="text-slate-500 font-medium text-sm mt-1">{user?.email || 'No email found'}</Text>
                         <View className="bg-emerald-50 px-3 py-1 rounded-full mt-3 border border-emerald-100 flex-row items-center">
@@ -138,12 +138,12 @@ export default function SettingsScreen() {
                                 <Text className="text-slate-700 font-bold mb-2 text-xs uppercase tracking-widest ml-1">New Password</Text>
                                 <View className="bg-white border border-slate-200 rounded-2xl h-14 px-4 flex-row items-center">
                                     <Feather name="lock" size={18} color="#94A3B8" />
-                                    <TextInput 
-                                        className="flex-1 ml-3 text-slate-900 font-medium" 
-                                        placeholder="••••••••" 
-                                        secureTextEntry 
-                                        value={newPassword} 
-                                        onChangeText={setNewPassword} 
+                                    <TextInput
+                                        className="flex-1 ml-3 text-slate-900 font-medium"
+                                        placeholder="••••••••"
+                                        secureTextEntry
+                                        value={newPassword}
+                                        onChangeText={setNewPassword}
                                     />
                                 </View>
                             </View>
@@ -152,20 +152,20 @@ export default function SettingsScreen() {
                                 <Text className="text-slate-700 font-bold mb-2 text-xs uppercase tracking-widest ml-1">Confirm Password</Text>
                                 <View className="bg-white border border-slate-200 rounded-2xl h-14 px-4 flex-row items-center">
                                     <Feather name="check-circle" size={18} color="#94A3B8" />
-                                    <TextInput 
-                                        className="flex-1 ml-3 text-slate-900 font-medium" 
-                                        placeholder="••••••••" 
-                                        secureTextEntry 
-                                        value={confirmPassword} 
-                                        onChangeText={setConfirmPassword} 
+                                    <TextInput
+                                        className="flex-1 ml-3 text-slate-900 font-medium"
+                                        placeholder="••••••••"
+                                        secureTextEntry
+                                        value={confirmPassword}
+                                        onChangeText={setConfirmPassword}
                                     />
                                 </View>
                             </View>
 
-                            <TouchableOpacity 
-                                onPress={handleUpdatePassword} 
-                                disabled={isSaving || !newPassword} 
-                                activeOpacity={0.8} 
+                            <TouchableOpacity
+                                onPress={handleUpdatePassword}
+                                disabled={isSaving || !newPassword}
+                                activeOpacity={0.8}
                                 className={`h-14 rounded-2xl flex-row justify-center items-center mt-4 shadow-sm ${isSaving || !newPassword ? 'bg-indigo-300' : 'bg-indigo-600 shadow-indigo-500/30'}`}
                             >
                                 {isSaving ? <ActivityIndicator color="white" /> : <><Text className="font-bold text-white mr-2">Update Password</Text><Feather name="shield" size={18} color="white" /></>}
@@ -174,9 +174,9 @@ export default function SettingsScreen() {
                     </View>
 
                     <View className="pt-8 border-t border-slate-200">
-                         <TouchableOpacity onPress={handleSignOut} className="flex-row items-center justify-center bg-red-50 p-4 rounded-xl border border-red-100">
+                        <TouchableOpacity onPress={handleSignOut} className="flex-row items-center justify-center bg-red-50 p-4 rounded-xl border border-red-100">
                             <Feather name="log-out" size={18} color="#EF4444" />
-                            <Text className="ml-3 font-bold text-red-600">Secure Sign Out</Text>
+                            <Text className="ml-3 font-bold text-red-600">Sign Out</Text>
                         </TouchableOpacity>
                     </View>
 
