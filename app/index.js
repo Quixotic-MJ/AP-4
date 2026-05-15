@@ -60,7 +60,7 @@ export default function AdminLoginScreen() {
             >
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <ScrollView 
-                        contentContainerClassName="flex-grow justify-center px-6 sm:px-12 pt-10 pb-8 max-w-md w-full self-center"
+                        contentContainerClassName="flex-grow justify-center px-6 sm:px-12 pt-10 pb-48 max-w-md w-full self-center"
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
                     >

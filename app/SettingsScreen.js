@@ -74,7 +74,7 @@ export default function SettingsScreen() {
                     ]
                 );
             } else {
-                Alert.alert("Error", "Failed to update password. Please try again.");
+                Alert.alert("Error", error.message || "Failed to update password. Please try again.");
             }
         } finally {
             setIsSaving(false);
