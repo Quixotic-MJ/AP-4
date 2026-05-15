@@ -1,10 +1,11 @@
 import { db } from '../firebaseConfig'; 
-import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, getCountFromServer } from "firebase/firestore";
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, getCountFromServer, orderBy, limit } from "firebase/firestore";
 
 // --- Collection Names ---
 const RECIPES_COLLECTION = "recipes";
 const EXERCISES_COLLECTION = "exercises";
 const ADMINS_COLLECTION = "admins";
+const ACTIVITIES_COLLECTION = "activities";
 
 // ================================================================
 //  RECIPE SERVICES
@@ -157,5 +158,56 @@ export const getCounts = async () => {
     } catch (e) {
         console.error("Error fetching counts: ", e);
         return { recipes: 0, exercises: 0, admins: 0 };
+    }
+};
+
+// ================================================================
+//  ACTIVITY SERVICES
+// ================================================================
+
+export const addActivity = async (type, desc, userEmail, color, dotColor) => {
+    try {
+        const activityData = {
+            type,
+            desc,
+            user: userEmail,
+            color,
+            dotColor,
+            timestamp: new Date().toISOString()
+        };
+        await addDoc(collection(db, ACTIVITIES_COLLECTION), activityData);
+    } catch (e) {
+        console.error("Error adding activity: ", e);
+    }
+};
+
+export const getRecentActivities = async (limitCount = 10) => {
+    try {
+        const q = query(
+            collection(db, ACTIVITIES_COLLECTION),
+            orderBy("timestamp", "desc"),
+            limit(limitCount)
+        );
+        const querySnapshot = await getDocs(q);
+        const activities = [];
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            // Format time nicely if possible
+            let timeString = "Just now";
+            if (data.timestamp) {
+                const date = new Date(data.timestamp);
+                timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            
+            activities.push({
+                id: doc.id,
+                time: timeString,
+                ...data
+            });
+        });
+        return activities;
+    } catch (e) {
+        console.error("Error fetching activities: ", e);
+        return [];
     }
 };

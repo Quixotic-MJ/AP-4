@@ -15,7 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { getAdmins, addAdmin } from '../services/db';
+import { auth } from '../firebaseConfig';
+import { getAdmins, addAdmin, addActivity } from '../services/db';
 
 const AdminListItem = ({ admin }) => (
     <View className="bg-white p-4 rounded-2xl mb-3 border border-slate-100 flex-row items-center shadow-sm shadow-slate-200/50">
@@ -98,6 +99,10 @@ export default function AdminManagementScreen() {
                 permissions: permissions,
                 created_at: new Date().toISOString()
             });
+            
+            const userEmail = auth.currentUser?.email || 'Unknown Admin';
+            await addActivity('ADMIN_PROVISIONED', `Provisioned new ${role}: ${email.trim().toLowerCase()}`, userEmail, 'text-indigo-600', 'bg-indigo-500');
+            
             Alert.alert("Success", "Admin provisioned.");
             setEmail(''); setPassword('');
             await fetchAdmins();
@@ -121,8 +126,8 @@ export default function AdminManagementScreen() {
                 <View className="w-10" />
             </View>
 
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-                <ScrollView contentContainerClassName="p-6 pb-12" showsVerticalScrollIndicator={false}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
+                <ScrollView contentContainerClassName="p-6 pb-48" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                     
                     {/* --- CREATION FORM --- */}
                     <View className="mb-10">

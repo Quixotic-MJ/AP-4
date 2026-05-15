@@ -5,38 +5,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { getCounts } from '../services/db';
-
-// --- MOCK CRUD ACTIVITY DATA ---
-const recentActivity = [
-    {
-        id: '1',
-        type: 'RECIPE_CREATED',
-        color: 'text-blue-600',
-        dotColor: 'bg-blue-500',
-        time: '10:42 AM',
-        desc: 'New recipe "Mediterranean Wild Salmon" published to Low-Sodium protocol.',
-        user: 'Admin: J. Doe'
-    },
-    {
-        id: '2',
-        type: 'ADMIN_PROVISIONED',
-        color: 'text-indigo-600',
-        dotColor: 'bg-indigo-500',
-        time: '09:15 AM',
-        desc: 'Dr. Sarah Chen granted Clinical Administrator access credentials.',
-        user: 'System Operations'
-    },
-    {
-        id: '3',
-        type: 'EXERCISE_UPDATED',
-        color: 'text-emerald-600',
-        dotColor: 'bg-emerald-500',
-        time: '08:30 AM',
-        desc: 'Duration for "Phase 1 Cardiac Walk" increased from 15 to 20 mins.',
-        user: 'Admin: M. Smith'
-    }
-];
+import { auth } from '../firebaseConfig';
+import { getCounts, getRecentActivities } from '../services/db';
 
 export default function SystemOverviewScreen() {
     const router = useRouter();
@@ -45,15 +15,20 @@ export default function SystemOverviewScreen() {
     // State
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [counts, setCounts] = useState({ recipes: 0, exercises: 0, admins: 0 });
+    const [recentActivities, setRecentActivities] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchMetrics = async () => {
+        const fetchData = async () => {
             const fetchedCounts = await getCounts();
             setCounts(fetchedCounts);
+            
+            const fetchedActivities = await getRecentActivities(5);
+            setRecentActivities(fetchedActivities);
+            
             setIsLoading(false);
         };
-        fetchMetrics();
+        fetchData();
     }, []);
 
     // --- Navigation Helper ---
@@ -84,8 +59,14 @@ export default function SystemOverviewScreen() {
                         </Text>
                     </View>
                 </View>
-                <TouchableOpacity className="w-9 h-9 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shadow-sm items-center justify-center">
-                    <Text className="font-bold text-slate-600 text-xs">AD</Text>
+                <TouchableOpacity onPress={() => router.push('/SettingsScreen')} className="w-9 h-9 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shadow-sm items-center justify-center">
+                    {auth.currentUser?.photoURL ? (
+                        <Image source={{ uri: auth.currentUser.photoURL }} className="w-full h-full" />
+                    ) : (
+                        <Text className="font-bold text-slate-600 text-xs">
+                            {auth.currentUser?.email ? auth.currentUser.email.substring(0, 2).toUpperCase() : 'AD'}
+                        </Text>
+                    )}
                 </TouchableOpacity>
             </View>
 
@@ -138,26 +119,32 @@ export default function SystemOverviewScreen() {
                 {/* --- ACTIVITY LOG --- */}
                 <View className="bg-white rounded-[32px] p-6 mb-8 border border-slate-100 shadow-sm shadow-slate-200/30">
                     <Text className="text-lg font-bold text-slate-900 mb-6">Recent Activity</Text>
-                    <View className="space-y-6">
-                        {recentActivity.map((activity, index) => (
-                            <View key={activity.id} className={`flex-row ${index !== recentActivity.length - 1 ? 'border-b border-slate-100 pb-6' : ''}`}>
-                                <View className="mt-1.5 mr-4">
-                                    <View className={`w-2.5 h-2.5 rounded-full ${activity.dotColor}`} />
-                                </View>
-                                <View className="flex-1">
-                                    <View className="flex-row justify-between items-start mb-1.5">
-                                        <Text className={`font-black text-[11px] uppercase tracking-widest ${activity.color}`}>{activity.type}</Text>
-                                        <Text className="text-slate-400 text-[11px] font-medium">{activity.time}</Text>
+                    {isLoading ? (
+                        <ActivityIndicator size="small" color="#1D4ED8" />
+                    ) : recentActivities.length === 0 ? (
+                        <Text className="text-slate-500 text-center font-medium">No recent activities.</Text>
+                    ) : (
+                        <View className="space-y-6">
+                            {recentActivities.map((activity, index) => (
+                                <View key={activity.id} className={`flex-row ${index !== recentActivities.length - 1 ? 'border-b border-slate-100 pb-6' : ''}`}>
+                                    <View className="mt-1.5 mr-4">
+                                        <View className={`w-2.5 h-2.5 rounded-full ${activity.dotColor}`} />
                                     </View>
-                                    <Text className="text-slate-700 text-[14px] leading-relaxed font-medium mb-2">{activity.desc}</Text>
-                                    <View className="flex-row items-center">
-                                        <Feather name="user" size={12} color="#94A3B8" />
-                                        <Text className="text-slate-400 text-[11px] font-bold ml-1.5">{activity.user}</Text>
+                                    <View className="flex-1">
+                                        <View className="flex-row justify-between items-start mb-1.5">
+                                            <Text className={`font-black text-[11px] uppercase tracking-widest ${activity.color}`}>{activity.type}</Text>
+                                            <Text className="text-slate-400 text-[11px] font-medium">{activity.time}</Text>
+                                        </View>
+                                        <Text className="text-slate-700 text-[14px] leading-relaxed font-medium mb-2">{activity.desc}</Text>
+                                        <View className="flex-row items-center">
+                                            <Feather name="user" size={12} color="#94A3B8" />
+                                            <Text className="text-slate-400 text-[11px] font-bold ml-1.5">{activity.user}</Text>
+                                        </View>
                                     </View>
                                 </View>
-                            </View>
-                        ))}
-                    </View>
+                            ))}
+                        </View>
+                    )}
                 </View>
             </ScrollView>
 
@@ -209,6 +196,16 @@ export default function SystemOverviewScreen() {
                             >
                                 <MaterialCommunityIcons name="shield-account" size={18} color="#94A3B8" />
                                 <Text className="ml-3 font-semibold text-slate-300">Admin Accounts</Text>
+                            </TouchableOpacity>
+
+                            <Text className="px-6 text-slate-500 font-bold text-[11px] uppercase tracking-wider mt-6 mb-3">Preferences</Text>
+
+                            <TouchableOpacity 
+                                onPress={() => handleNavigate('/SettingsScreen')} 
+                                className="flex-row items-center px-6 py-3.5 mx-2 rounded-xl border border-transparent"
+                            >
+                                <Feather name="settings" size={18} color="#94A3B8" />
+                                <Text className="ml-3 font-semibold text-slate-300">Settings & Profile</Text>
                             </TouchableOpacity>
                         </ScrollView>
 

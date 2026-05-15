@@ -6,9 +6,10 @@ import { StatusBar } from 'expo-status-bar';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { auth } from '../firebaseConfig';
 
 // Import Firebase functions from your service file
-import { addRecipe, getRecipes, updateRecipe, deleteRecipe } from '../services/db';
+import { addRecipe, getRecipes, updateRecipe, deleteRecipe, addActivity } from '../services/db';
 
 // --- Sub-component for Simple Recipe Cards ---
 const RecipeCard = ({ item, openEditModal, handleArchive, getSodiumBadge }) => {
@@ -162,10 +163,13 @@ export default function ContentManagementScreen() {
         };
 
         try {
+            const userEmail = auth.currentUser?.email || 'Unknown Admin';
             if (isEditing) {
                 await updateRecipe(editingId, recipeData);
+                await addActivity('RECIPE_UPDATED', `Updated recipe "${formName}".`, userEmail, 'text-blue-600', 'bg-blue-500');
             } else {
                 await addRecipe(recipeData);
+                await addActivity('RECIPE_CREATED', `Published new recipe "${formName}".`, userEmail, 'text-blue-600', 'bg-blue-500');
             }
             await fetchData(); // Refresh the list from Firebase
             setModalVisible(false);
@@ -187,7 +191,9 @@ export default function ContentManagementScreen() {
                     style: "destructive",
                     onPress: async () => {
                         try {
+                            const userEmail = auth.currentUser?.email || 'Unknown Admin';
                             await deleteRecipe(id);
+                            await addActivity('RECIPE_ARCHIVED', `Archived recipe ID: ${id.substring(0, 6)}...`, userEmail, 'text-slate-500', 'bg-slate-400');
                             await fetchData(); // Refresh list after deletion
                         } catch (error) {
                             Alert.alert("Error", "Failed to delete recipe.");
@@ -306,7 +312,7 @@ export default function ContentManagementScreen() {
                 onRequestClose={() => !isSaving && setModalVisible(false)}
             >
                 <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                     className="flex-1 bg-[#F8FAFC]"
                 >
                     <View className="flex-row items-center justify-between px-6 pt-6 pb-4 bg-white border-b border-slate-100">
@@ -325,7 +331,7 @@ export default function ContentManagementScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="p-6 pb-24">
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="p-6 pb-24" keyboardShouldPersistTaps="handled">
 
                         {/* Image Upload Section */}
                         <Text className="text-slate-800 font-bold mb-2 ml-1 text-sm">Recipe Image</Text>

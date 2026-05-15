@@ -5,9 +5,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { auth } from '../firebaseConfig';
 
 // Assuming you create these in your db.js service
-import { addExercise, getExercises, updateExercise, deleteExercise } from '../services/db';
+import { addExercise, getExercises, updateExercise, deleteExercise, addActivity } from '../services/db';
 
 const ExerciseCard = ({ item, openEditModal, handleDelete }) => {
     const getLevelStyle = (level) => {
@@ -43,7 +44,7 @@ const ExerciseCard = ({ item, openEditModal, handleDelete }) => {
                             <TouchableOpacity onPress={() => openEditModal(item)} className="p-1">
                                 <Feather name="edit-2" size={16} color="#64748B" />
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={() => handleDelete(item.Exercise_ID)} className="p-1">
+                            <TouchableOpacity onPress={() => handleDelete(item.Exercise_ID, item.Routine_name)} className="p-1">
                                 <Feather name="trash-2" size={16} color="#EF4444" />
                             </TouchableOpacity>
                         </View>
@@ -106,6 +107,30 @@ export default function ContentManagementScreen() {
         setModalVisible(true);
     };
 
+    const handleDelete = (id, name) => {
+        Alert.alert(
+            "Delete Routine",
+            `Are you sure you want to delete "${name}"?`,
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const userEmail = auth.currentUser?.email || 'Unknown Admin';
+                            await deleteExercise(id);
+                            await addActivity('EXERCISE_DELETED', `Deleted exercise routine "${name}".`, userEmail, 'text-red-500', 'bg-red-400');
+                            await fetchData();
+                        } catch (error) {
+                            Alert.alert("Error", "Failed to delete routine.");
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const handleSave = async () => {
         if (!formName.trim() || !formDuration.trim()) {
             Alert.alert("Error", "Name and Duration are required.");
@@ -125,8 +150,14 @@ export default function ContentManagementScreen() {
         };
 
         try {
-            if (isEditing) await updateExercise(editingId, exerciseData);
-            else await addExercise(exerciseData);
+            const userEmail = auth.currentUser?.email || 'Unknown Admin';
+            if (isEditing) {
+                await updateExercise(editingId, exerciseData);
+                await addActivity('EXERCISE_UPDATED', `Updated exercise "${formName}".`, userEmail, 'text-emerald-600', 'bg-emerald-500');
+            } else {
+                await addExercise(exerciseData);
+                await addActivity('EXERCISE_CREATED', `Added new exercise "${formName}".`, userEmail, 'text-emerald-600', 'bg-emerald-500');
+            }
             await fetchData();
             setModalVisible(false);
         } catch (e) {
@@ -151,7 +182,7 @@ export default function ContentManagementScreen() {
                 </View>
             </View>
 
-            <ScrollView contentContainerClassName="px-6 pt-4 pb-32" showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerClassName="px-6 pt-4 pb-32" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <View className="mb-6">
                     <Text className="text-[25px] leading-[38px] font-black text-slate-900 tracking-tight mb-2">Manage Protocols</Text>
                     <Text className="text-[15px] text-slate-500 font-medium leading-relaxed">Customize cardiac rehabilitation routines and stability levels.</Text>
@@ -163,7 +194,7 @@ export default function ContentManagementScreen() {
                     <Text className="text-center text-slate-400 mt-10">No routines found.</Text>
                 ) : (
                     exercises.map((item) => (
-                        <ExerciseCard key={item.Exercise_ID} item={item} openEditModal={openEditModal} handleDelete={() => { }} />
+                        <ExerciseCard key={item.Exercise_ID} item={item} openEditModal={openEditModal} handleDelete={handleDelete} />
                     ))
                 )}
             </ScrollView>
@@ -177,7 +208,7 @@ export default function ContentManagementScreen() {
 
             {/* Form Modal */}
             <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-white">
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-white">
                     <View className="flex-row items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
                         <TouchableOpacity onPress={() => setModalVisible(false)}><Text className="text-slate-500 font-bold">Cancel</Text></TouchableOpacity>
                         <Text className="font-black text-slate-900 text-lg">{isEditing ? 'Edit Routine' : 'New Routine'}</Text>
